@@ -85,6 +85,6 @@ etfw20l_quima_tcon_analysis <- s_get_results(df_ = etfs$ETFW20L,
 
 etfw20l_quima_tcon_analysis <- s_analyse_results(etfw20l_quima_tcon_results)
 
-# This function aggregates the results of the strategies constructed with the
-# given parameter pool.
+# This function analyses the results of the strategies constructed with the
+# given parameter pool, producing tables, IR plots and heatmaps.
 ##----------------------------------------------------------------------------##
