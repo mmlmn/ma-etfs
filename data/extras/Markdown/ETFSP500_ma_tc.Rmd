@@ -1,0 +1,241 @@
+---
+title: "ETFSP500 - MA / TC"
+output: 
+  bookdown::pdf_document2:
+      keep_tex: yes
+      df_print: kable
+      extra_dependencies: ["booktabs", "threeparttable", "float", "flafter", "subfig"]
+      # caption: ["justification=raggedright" , "singlelinecheck=false"] 
+      fig_caption: yes
+documentclass: article
+margin-left: 2.5cm
+margin-right: 2.5cm
+margin-top: 2.5cm
+margin-bottom: 2.5cm
+linestretch: 1.5
+# fontsize: 12pt
+papersize: a4
+links-as-notes: true
+link-citations: true
+urlcolor: blue
+linkcolor: blue
+graphics: yes
+indent: true
+toc: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(knitr.table.format = "latex") # kableExtra does this automatically
+# knitr::opts_chunk$set(fig.align = "center")
+
+
+# READ RAW DATA
+etfs <- readRDS("data/input/etfs.rds")
+
+# INCLUDE
+required <- list(pkgs = c("Rcpp", "tidyverse", "TTR", "tidyquant", 
+                          "PerformanceAnalytics", "gridExtra", "dygraphs", 
+                          "kableExtra", "wesanderson", "htmlwidgets",
+                          "webshot", "formattable"), 
+                 srcs = c("include-s_helper_functions.R",
+                          "script-input_summaries.R",
+                          "function-s_run_strategy.R",  # Rcpp compilation
+                          "function-s_get_results.R", 
+                          "function-s_analyse_results.R"),
+                 dirs = c("data/input", "data/results", "data/results/static")
+                 )
+
+sapply(required$pkgs, function(vec) {
+  if(!require(vec, character.only = T)) { 
+    install.packages(vec); library(vec, character.only = T)}})
+
+sapply(required$srcs, function(vec) {
+  source(paste0("src/", vec))})
+
+sapply(required$dirs, h_ensure_dir)
+
+source("src/script-data_prep.R") # many files will get loaded
+
+
+```
+
+
+# TYPE RANK
+
+
+```{r, etfsp500-ma-type}
+
+etfsp500_ma_tc_type_tab <- etfsp500_ma_tc_analysis$dat_type_rank %>% 
+  select(-id) %>%
+  mutate(across(everything(),
+                ~ case_when(is.na(.) ~ cell_spec(., "latex", color = "lightgray"),
+                            is.numeric(.) ~ ifelse(. < 0, 
+                                                   cell_spec(format(., digits = 2), "latex", color = "red"),
+                                                   cell_spec(format(., digits = 2), "latex", color = "black")),
+                            TRUE ~ cell_spec(., "latex", color = "black")))) %>% 
+  kbl(., "latex", caption = "MA strategy results -- ETFSP500", 
+      col.names = c("MA Type", "IR", "SR", "aRC", "aSD", "Sigs.", 
+                    "Min", "Max", "Mean", "Med.", # long-term lag
+                    "Min", "Max", "Mean", # band value
+                    # "Range", "Mean($Q_{3}$)", # short-term lag
+                    # "Range", "Mean($Q_{3}$)", # long-term lag
+                    # "Mean($\\Omega$)", # band value
+                    "N", "Share ($\\%$)"),
+      align = c("l", rep("r", 14)), 
+      digits = c(0, rep(3, 4), rep(0, 5), rep(2, 3), 0, 2), 
+      format.args = list(scientific = F),
+      escape = F,
+      booktabs = T
+  ) %>%
+  # mutate(across(everything(), ~column_spec(
+  #   .x, c(2:13),
+  #   color = case_when(
+  #     is.na(.x) ~ "gray",
+  #     .x < 0    ~ "red",
+  #     T     ~ "black"
+  # )))) %>%
+  kable_paper() %>%
+  kable_styling(latex_options = c("scale_down", "striped", "hold_position"),
+                full_width = F
+  ) %>% 
+  pack_rows(group_label = "Panel A. Filter: IR greater than 0", 1, 3,
+            latex_gap_space = "0.6em", hline_after = T,
+            escape = F, bold = F, italic = T
+  ) %>%
+  pack_rows(group_label = "MA", 1, 3,
+            latex_gap_space = "0.6em",
+            escape = F, bold = F, italic = T
+  ) %>%
+  pack_rows(group_label = "Panel B. Filter: IR greater than $Q_{3}$", 4, 6,
+            latex_gap_space = "0.6em", hline_after = T,
+            escape = F, bold = F, italic = T
+  ) %>%
+  pack_rows(group_label = "MA", 4, 6,
+            latex_gap_space = "0.6em",
+            escape = F, bold = F, italic = T
+  ) %>%
+  pack_rows(group_label = "Panel C. Filter: IR smaller than $Q_{1}$", 7, 9,
+            latex_gap_space = "0.6em", hline_after = T,
+            escape = F, bold = F, italic = T
+  ) %>%
+  pack_rows(group_label = "MA", 7, 9,
+            latex_gap_space = "0.6em",
+            escape = F, bold = F, italic = T
+  ) %>%
+  add_header_above(c(" " = 6, "Long-term lag" = 4, "Band" = 3, " " = 2)) %>%
+  add_header_above(c(" " = 1, "Performance" = 5, "Parameters" = 7, "Descriptive" = 2)) %>%
+  # column_spec(1, border_right=T) %>%
+  # column_spec(6, border_right=T) %>%
+  # column_spec(12, border_right=T) %>%
+  footnote(general = "In this table, we aggregate the standard MA strategy performance and parameter data for ETFSP500 across the three MA types. We break down the results into three subgroups: the first representing the data for strategies with positive IR (i.e. beating the BH strategy); the second and third subgroup characterising the top 25% and the bottom 25% of strategies, respectively.",
+           number = c("All performance measures use standard formulation defined in Appendix A; ", "The performance and parameter statistics are calculated with respect to the subgroup size reported in column «N»; ", "Column «Share (%)» provides a subgroup's share in the whole sample (1170)."), 
+           general_title = "",
+           footnote_as_chunk = F,
+           threeparttable = T,
+           fixed_small_size = T,
+           escape = T)
+
+
+
+
+
+
+etfsp500_ma_tc_type_tab
+
+```
+
+\newpage
+
+# IR SCORE
+
+
+```{r, etfsp500-ma-score, message=FALSE, warning=FALSE, fig.align = "center", out.width = "50%", fig.cap = "[MA] ETFSP500 -- IR score by value of the long-term lag.", fig.ncol = 2, fig.nrow = 2, fig.subcap = c("For the whole sample", "For the whole sample, with band $\\geq$ 0.04")}
+
+
+etfsp500_ma_tc_analysis$plot_lag_IRws
+etfsp500_ma_tc_analysis$plot_lag_IRwsb
+
+```
+
+\newpage
+
+# HEATMAPS
+
+
+```{r, etfsp500-ma-heatmaps, message=FALSE, fig.cap = "[MA] ETFSP500 -- IR by lag length and band value.",  fig.dim=c(8,3), fig.ncol = 1, fig.align='center', fig.subcap = c("Information Ratio", "Signals per strategy")}
+
+# par(mar = c(4, 4, 0.1, 0.1), mfrow = c(2, 1))
+# , fig.align="center", out.width = "60%",
+# out.width = "80%" works fine, but test presentation for other values
+# 
+etfsp500_ma_tc_analysis$plot_heat_sma
+etfsp500_ma_tc_analysis$plot_heat_smas
+
+```
+
+\newpage
+
+# DRAWDOWNS
+
+
+```{r, etfsp500-ma-drawdowns-tab, echo=FALSE}
+
+
+etfsp500_ma_tc_drawdowns_tab <- etfsp500_ma_tc_results$drawdowns_data %>% 
+  mutate(across(everything(),
+                ~ case_when(is.na(.) ~ cell_spec(., "latex", color = "lightgray"),
+                            . == ID ~ cell_spec(., background = c("orange", "blue", "green", "gray", "gray", "red")),
+                            is.numeric(.) ~ ifelse(. < 0, 
+                                                   cell_spec(format(., digits = 2), "latex", color = "red"),
+                                                   cell_spec(format(., digits = 2), "latex", color = "black")),
+                            TRUE ~ cell_spec(., "latex", color = "black")))
+         ) %>% 
+  kbl(., "latex", caption = "Select strategy results -- ETFSP500", 
+      col.names = c("ID", "Strategy", "aRC", "aSD", "IR", "SR", "MD", 
+                    "MDD", "Sigs."),
+      align = c("r", "l", rep("r", 7)),
+      digits = c(rep(0, 2), rep(3, 6), 0), 
+      format.args = list(scientific = F),
+      escape = F,
+      booktabs = T
+  ) %>%
+  kable_paper() %>%
+  kable_styling(latex_options = c("hold_position", "condensed"),
+                full_width = F, font_size = 9
+  ) %>% 
+  # column_spec(1, background = c("orange", "blue", "green", "gray", "gray", "red")) %>%
+  # pack_rows(group_label = "Panel A. Strategies", 1, 5,
+  #           latex_gap_space = "0.6em",
+  #           escape = F, bold = F, italic = T
+  # ) %>%
+  # pack_rows(group_label = "Panel B. Buy-and-hold benchmark", 6, 6,
+  #           latex_gap_space = "0.6em",
+  #           escape = F, bold = F, italic = T
+  # ) %>%
+  add_header_above(c(" " = 2, "Performance" = 6, " " = 1)) %>%
+  footnote(general = "This table provides a selection of performance measures for the two best, two worst and the middle standard MA strategy on ETFSP500, in comparison with the BH benchmark.",
+           number = c("IR values, as per Appendix A, refer to a strategy's result with respect to the BH benchmark; ", "SR shows the performance against a risk-free return for each strategy and the BH benchmark; ", "Colours in column «ID» respond to line colours in the following drawdown plot."), 
+           general_title = "",
+           footnote_as_chunk = F,
+           threeparttable = T,
+           fixed_small_size = T,
+           escape = T)
+
+
+etfsp500_ma_tc_drawdowns_tab
+
+```
+
+
+
+
+```{r, etfsp500-ma-drawdowns-fig, out.width = "100%", fig.cap = "[MA] ETFSP500 -- Drawdowns for two top (blue and orange), two bottom (gray) and the middle (green) strategy, vs drawdowns for the BH benchmark (red).", fig.align = "center"}
+
+
+knitr::include_graphics("data/results/static/ETFSP500_ma_tc_drawdowns.png")
+
+```
+
+
+
