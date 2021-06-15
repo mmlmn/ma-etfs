@@ -4,7 +4,7 @@ This code can be used to replicate the results of a study of MA strategies on Po
 
 To start, visit [Examples.R](Examples.R), where you will find explanations on how to generate MA strategies and analyse them.
 
-All results are available in .Rmd and pdf files in [extras](../data/extras)
+All results are available in .Rmd and pdf files in [extras](./data/extras)
 
 # Technical notes
 
